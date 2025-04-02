@@ -1,0 +1,1841 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Engenharia Eletromecânica</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
+    <style>
+        body {
+            display: flex;
+        }
+
+        .sidebar {
+            width: 280px;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background-color: #f8f9fa;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .content {
+            margin-left: 280px;
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            height: 100vh;
+        }
+
+        .nav-link {
+            cursor: pointer;
+        }
+
+        .project-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .disciplina {
+            color: #00179b;
+            font-weight: bold;
+        }
+
+        .vencimento-ate-2-meses td {
+            background-color: rgba(248, 215, 218, 0.7) !important;
+            color: black;
+        }
+
+
+        .vencimento-2-a-4-meses td {
+            background-color: rgba(255, 165, 0, 0.2) !important; /* laranja claro */
+            color: #000;
+        }
+
+        .vencimento-6-a-12-meses td {
+            background-color: rgba(255, 255, 0, 0.12) !important; /* amarelo claro */
+            color: #000;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h5 class="text-center text-primary">Relatório</h5>
+        <p class="text-center text-primary" style="margin-bottom: 0px;">Projetos Engenharia</p>
+        <h5 class="text-center text-primary" style="margin-top: 0px;">Março de 2025</h5>
+        <hr>
+    
+        <button class="btn btn-secondary w-100 mb-2" data-bs-toggle="collapse" data-bs-target="#filtroUHE">
+            <i class="fa-solid fa-industry"></i> Filtrar por Usina
+        </button>
+        <div id="filtroUHE" class="collapse">
+            <div id="sidebar-uhe"></div>
+        </div>
+
+        <button class="btn btn-secondary w-100 mb-2" data-bs-toggle="collapse" data-bs-target="#filtroDisciplina">
+            <i class="fas fa-tools"></i> Filtrar por Disciplina
+        </button>
+        <div id="filtroDisciplina" class="collapse">
+            <div id="sidebar-disciplina"></div>
+        </div>        
+    
+        <button class="btn btn-secondary w-100 mb-2" data-bs-toggle="collapse" data-bs-target="#filtroGestor">
+            <i class="fas fa-user-tie"></i> Filtrar por Gestor
+        </button>
+        <div id="filtroGestor" class="collapse">
+            <div id="sidebar-gestor"></div>
+        </div>
+
+        <button class="btn btn-secondary w-100 mb-2" data-bs-toggle="collapse" data-bs-target="#filtroVencimento">
+            <i class="fas fa-calendar-alt"></i> Filtrar por Vencimento
+        </button>
+        <div id="filtroVencimento" class="collapse">
+            <div id="listaDatas" class="p-2"></div>
+        </div>
+    
+        <button id="btnTodosProjetos" class="btn btn-dark w-100 mt-3">Todos os Projetos</button>
+
+        <hr>
+        <div class="mb-3">
+            <h5>Filtrar por texto</h5>
+            <input id="searchInput" type="text" class="form-control" placeholder="🔍 Buscar projeto, fornecedor ou gestor...">
+          </div>
+        
+        <hr>
+        <div class="mt-3" id="resumoSidebar">
+            <h5>Resumo dos Dados</h5>
+            <div class="card mb-2 p-2 shadow-sm">
+                <h6 class="text-muted mb-1">📊 Total de Projetos: <span id="totalProjetos">--</span></h6>
+            </div>
+            <div class="card mb-2 p-2 shadow-sm">
+                <h6 class="text-muted mb-1">💰 Valor dos Contratos</h6>
+                <span id="valorTotalContratos">--</span>
+            </div>
+            <div class="card mb-2 p-2 shadow-sm">
+                <h6 class="text-muted mb-1">⏳ Vencem até 2 meses: <span id="projetosVencemLogo">--</span></h6>
+            </div>
+        </div>        
+          
+    </div>    
+    
+    <div class="content">
+        <div id="content"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // INSERÇÃO DOS DADOS
+        const dados =[
+    {
+        "uhe": "UHE Arco Verde",
+        "areas": [
+            {
+                "nome": "Confiabilidade",
+                "projetos": [
+                    {
+                        "descricao": "Fornecimento de equipamentos para sistemas da usina.",
+                        "fornecedor": "BRASIL SERVICE ENGENHARIA (12665125)",
+                        "gestor": "Rafael Monteiro Lopes",
+                        "vencimento": "01/06/2025",
+                        "valor_contrato": 3245524.23,
+                        "resumo": "26/02/2025 - Inspeção técnica concluída com parecer positivo.\n20/01/2025 - Aguardando entrega final dos equipamentos.",
+                        "pp_contrato": "4600003527",
+                        "saldo_si": 662824.73,
+                        "natureza": "Guarda-Chuva"
+                    },
+                    {
+                        "descricao": "Serviços de manutenção para sistemas da usina.",
+                        "fornecedor": "ENGEFLOW AUTOMAÇÃO INDUSTRIAL (12531843)",
+                        "gestor": "Eduardo Tavares Borges",
+                        "vencimento": "31/07/2025",
+                        "valor_contrato": 3270787.72,
+                        "resumo": "20/01/2025 - Execução em conformidade com cronograma atualizado.\n24/10/2024 - Planejamento aprovado para fase 2 da execução.\n12/11/2024 - Serviço parcialmente executado e em conformidade.",
+                        "pp_contrato": "4600003764",
+                        "saldo_si": 1071649.82,
+                        "natureza": "CAPEX"
+                    },
+                    {
+                        "descricao": "Inspeção técnica para sistemas da usina.",
+                        "fornecedor": "BRASIL SERVICE ENGENHARIA (12022905)",
+                        "gestor": "Fernanda Rocha Lima",
+                        "vencimento": "29/09/2025",
+                        "valor_contrato": 6679432.72,
+                        "resumo": "14/11/2024 - Reunião técnica realizada com o fornecedor.\n14/08/2024 - Reunião técnica realizada com o fornecedor.\n15/10/2024 - Em andamento etapa de comissionamento.\n04/12/2024 - Planejamento aprovado para fase 2 da execução.",
+                        "pp_contrato": "4600004257",
+                        "saldo_si": 2698410.68,
+                        "natureza": "Guarda-Chuva"
+                    },
+                    {
+                        "descricao": "Inspeção técnica para sistemas da usina.",
+                        "fornecedor": "SOLTEC SOLUÇÕES INDUSTRIAIS (12445516)",
+                        "gestor": "João Henrique Souza",
+                        "vencimento": "28/11/2025",
+                        "valor_contrato": 9167266.11,
+                        "resumo": "30/01/2025 - Aguardando entrega final dos equipamentos.\n23/09/2024 - Aguardando entrega final dos equipamentos.\n08/02/2025 - Planejamento aprovado para fase 2 da execução.\n06/02/2025 - Contrato em fase de encerramento.",
+                        "pp_contrato": "4600008371",
+                        "saldo_si": 4964931.21,
+                        "natureza": "OPEX"
+                    }
+                ]
+            },
+            {
+                "nome": "Mecânica",
+                "projetos": [
+                    {
+                        "descricao": "Serviços de manutenção para sistemas da usina.",
+                        "fornecedor": "BRASIL SERVICE ENGENHARIA (12883028)",
+                        "gestor": "Carolina Figueiredo Silva",
+                        "vencimento": "27/07/2027",
+                        "valor_contrato": 5772770.32,
+                        "resumo": "28/02/2025 - Planejamento aprovado para fase 2 da execução.\n19/02/2025 - Contrato revisado com base em novo escopo.\n02/07/2024 - Contrato em fase de encerramento.",
+                        "pp_contrato": "4600001542",
+                        "saldo_si": 2883681.03,
+                        "natureza": "OPEX"
+                    },
+                    {
+                        "descricao": "Fornecimento de equipamentos para sistemas da usina.",
+                        "fornecedor": "SOLTEC SOLUÇÕES INDUSTRIAIS (12722778)",
+                        "gestor": "João Henrique Souza",
+                        "vencimento": "05/08/2027",
+                        "valor_contrato": 8351132.58,
+                        "resumo": "02/03/2025 - Planejamento aprovado para fase 2 da execução.\n07/02/2025 - Inspeção técnica concluída com parecer positivo.\n10/10/2024 - Execução em conformidade com cronograma atualizado.",
+                        "pp_contrato": "4600007993",
+                        "saldo_si": 2680573.13,
+                        "natureza": "Guarda-Chuva"
+                    },
+                    {
+                        "descricao": "Fornecimento de equipamentos para sistemas da usina.",
+                        "fornecedor": "BRASIL SERVICE ENGENHARIA (12130987)",
+                        "gestor": "Fernanda Rocha Lima",
+                        "vencimento": "28/09/2026",
+                        "valor_contrato": 6817890.9,
+                        "resumo": "10/07/2024 - Aguardando entrega final dos equipamentos.\n05/07/2024 - Serviço parcialmente executado e em conformidade.",
+                        "pp_contrato": "4600006769",
+                        "saldo_si": 3710391.0,
+                        "natureza": "Outros"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "uhe": "UHE Monte Azul",
+        "areas": [
+            {
+                "nome": "Elétrica",
+                "projetos": [
+                    {
+                        "descricao": "Serviços de manutenção para sistemas da usina.",
+                        "fornecedor": "NORTE ENGENHARIA AVANÇADA (12249243)",
+                        "gestor": "Rafael Monteiro Lopes",
+                        "vencimento": "30/06/2027",
+                        "valor_contrato": 7943241.03,
+                        "resumo": "18/09/2024 - Serviço parcialmente executado e em conformidade.\n20/07/2024 - Reunião técnica realizada com o fornecedor.",
+                        "pp_contrato": "4600001998",
+                        "saldo_si": 2075885.1,
+                        "natureza": "Guarda-Chuva"
+                    },
+                    {
+                        "descricao": "Inspeção técnica para sistemas da usina.",
+                        "fornecedor": "BRASIL SERVICE ENGENHARIA (12201617)",
+                        "gestor": "Eduardo Tavares Borges",
+                        "vencimento": "09/03/2026",
+                        "valor_contrato": 9470427.39,
+                        "resumo": "08/01/2025 - Aditivo de prazo solicitado.\n21/12/2024 - Inspeção técnica concluída com parecer positivo.",
+                        "pp_contrato": "4600007568",
+                        "saldo_si": 4257339.97,
+                        "natureza": "CAPEX"
+                    },
+                    {
+                        "descricao": "Serviços de manutenção para sistemas da usina.",
+                        "fornecedor": "ALVO SISTEMAS TÉCNICOS (12007801)",
+                        "gestor": "Fernanda Rocha Lima",
+                        "vencimento": "07/04/2027",
+                        "valor_contrato": 4349788.69,
+                        "resumo": "22/01/2025 - Execução em conformidade com cronograma atualizado.\n16/10/2024 - Serviço parcialmente executado e em conformidade.\n25/01/2025 - Contrato revisado com base em novo escopo.",
+                        "pp_contrato": "4600003677",
+                        "saldo_si": 1718603.38,
+                        "natureza": "OPEX"
+                    },
+                    {
+                        "descricao": "Inspeção técnica para sistemas da usina.",
+                        "fornecedor": "ENGEFLOW AUTOMAÇÃO INDUSTRIAL (12447327)",
+                        "gestor": "Ana Clara Martins",
+                        "vencimento": "28/04/2027",
+                        "valor_contrato": 8715293.55,
+                        "resumo": "18/10/2024 - Planejamento aprovado para fase 2 da execução.\n15/08/2024 - Contrato em fase de encerramento.\n11/08/2024 - Execução em conformidade com cronograma atualizado.\n25/01/2025 - Contrato em fase de encerramento.",
+                        "pp_contrato": "4600002506",
+                        "saldo_si": 2751960.32,
+                        "natureza": "OPEX"
+                    },
+                    {
+                        "descricao": "Projeto e instalação para sistemas da usina.",
+                        "fornecedor": "ENGEFLOW AUTOMAÇÃO INDUSTRIAL (12539515)",
+                        "gestor": "Fernanda Rocha Lima",
+                        "vencimento": "28/03/2028",
+                        "valor_contrato": 8506564.11,
+                        "resumo": "21/02/2025 - Execução em conformidade com cronograma atualizado.\n05/02/2025 - Serviço parcialmente executado e em conformidade.\n13/10/2024 - Reunião técnica realizada com o fornecedor.",
+                        "pp_contrato": "4600005897",
+                        "saldo_si": 1705351.97,
+                        "natureza": "CAPEX"
+                    }
+                ]
+            },
+            {
+                "nome": "Mecânica",
+                "projetos": [
+                    {
+                        "descricao": "Inspeção técnica para sistemas da usina.",
+                        "fornecedor": "OMEGA POWER SOLUTIONS (12096971)",
+                        "gestor": "Carolina Figueiredo Silva",
+                        "vencimento": "17/02/2028",
+                        "valor_contrato": 6051184.41,
+                        "resumo": "20/02/2025 - Aguardando entrega final dos equipamentos.\n07/07/2024 - Reunião técnica realizada com o fornecedor.\n17/12/2024 - Execução em conformidade com cronograma atualizado.\n03/01/2025 - Inspeção técnica concluída com parecer positivo.",
+                        "pp_contrato": "4600005051",
+                        "saldo_si": 2608906.23,
+                        "natureza": "CAPEX"
+                    },
+                    {
+                        "descricao": "Fornecimento de equipamentos para sistemas da usina.",
+                        "fornecedor": "SOLTEC SOLUÇÕES INDUSTRIAIS (12232603)",
+                        "gestor": "Ana Clara Martins",
+                        "vencimento": "13/06/2028",
+                        "valor_contrato": 8517155.83,
+                        "resumo": "19/06/2024 - Contrato em fase de encerramento.\n01/10/2024 - Contrato revisado com base em novo escopo.\n08/06/2024 - Aditivo de prazo solicitado.\n05/02/2025 - Contrato em fase de encerramento.",
+                        "pp_contrato": "4600007786",
+                        "saldo_si": 2157616.79,
+                        "natureza": "Outros"
+                    },
+                    {
+                        "descricao": "Projeto e instalação para sistemas da usina.",
+                        "fornecedor": "OMEGA POWER SOLUTIONS (12805143)",
+                        "gestor": "Rafael Monteiro Lopes",
+                        "vencimento": "21/06/2027",
+                        "valor_contrato": 2277909.34,
+                        "resumo": "15/12/2024 - Em andamento etapa de comissionamento.\n14/06/2024 - Aditivo de prazo solicitado.",
+                        "pp_contrato": "4600001053",
+                        "saldo_si": 498912.22,
+                        "natureza": "CAPEX"
+                    },
+                    {
+                        "descricao": "Serviços de manutenção para sistemas da usina.",
+                        "fornecedor": "HIDROFORTE SUPRIMENTOS LTDA (12299718)",
+                        "gestor": "Ana Clara Martins",
+                        "vencimento": "19/11/2026",
+                        "valor_contrato": 1287835.82,
+                        "resumo": "15/10/2024 - Inspeção técnica concluída com parecer positivo.\n21/01/2025 - Serviço parcialmente executado e em conformidade.",
+                        "pp_contrato": "4600004985",
+                        "saldo_si": 418332.8,
+                        "natureza": "Guarda-Chuva"
+                    },
+                    {
+                        "descricao": "Serviços de manutenção para sistemas da usina.",
+                        "fornecedor": "OMEGA POWER SOLUTIONS (12234984)",
+                        "gestor": "Eduardo Tavares Borges",
+                        "vencimento": "04/07/2026",
+                        "valor_contrato": 1065744.89,
+                        "resumo": "11/06/2024 - Contrato revisado com base em novo escopo.\n09/09/2024 - Aditivo de prazo solicitado.",
+                        "pp_contrato": "4600004301",
+                        "saldo_si": 388478.69,
+                        "natureza": "OPEX"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "uhe": "UHE Vale Claro",
+        "areas": [
+            {
+                "nome": "Elétrica",
+                "projetos": [
+                    {
+                        "descricao": "Projeto e instalação para sistemas da usina.",
+                        "fornecedor": "NORTE ENGENHARIA AVANÇADA (12708343)",
+                        "gestor": "Lucas Mendes Ribeiro",
+                        "vencimento": "13/06/2026",
+                        "valor_contrato": 7969350.35,
+                        "resumo": "18/11/2024 - Contrato em fase de encerramento.\n28/09/2024 - Aditivo de prazo solicitado.",
+                        "pp_contrato": "4600006033",
+                        "saldo_si": 3509671.19,
+                        "natureza": "OPEX"
+                    },
+                    {
+                        "descricao": "Inspeção técnica para sistemas da usina.",
+                        "fornecedor": "OMEGA POWER SOLUTIONS (12011513)",
+                        "gestor": "Eduardo Tavares Borges",
+                        "vencimento": "14/03/2028",
+                        "valor_contrato": 3333463.71,
+                        "resumo": "28/08/2024 - Execução em conformidade com cronograma atualizado.\n22/02/2025 - Planejamento aprovado para fase 2 da execução.\n12/06/2024 - Reunião técnica realizada com o fornecedor.\n05/12/2024 - Aguardando entrega final dos equipamentos.",
+                        "pp_contrato": "4600003314",
+                        "saldo_si": 1142004.67,
+                        "natureza": "Outros"
+                    },
+                    {
+                        "descricao": "Projeto e instalação para sistemas da usina.",
+                        "fornecedor": "BRASIL SERVICE ENGENHARIA (12712809)",
+                        "gestor": "Lucas Mendes Ribeiro",
+                        "vencimento": "21/05/2026",
+                        "valor_contrato": 4913071.69,
+                        "resumo": "13/08/2024 - Aditivo de prazo solicitado.\n08/12/2024 - Inspeção técnica concluída com parecer positivo.\n13/12/2024 - Contrato revisado com base em novo escopo.\n18/10/2024 - Reunião técnica realizada com o fornecedor.",
+                        "pp_contrato": "4600005080",
+                        "saldo_si": 2089415.18,
+                        "natureza": "Outros"
+                    },
+                    {
+                        "descricao": "Inspeção técnica para sistemas da usina.",
+                        "fornecedor": "ENGEFLOW AUTOMAÇÃO INDUSTRIAL (12410739)",
+                        "gestor": "Fernanda Rocha Lima",
+                        "vencimento": "13/02/2028",
+                        "valor_contrato": 5810707.27,
+                        "resumo": "30/06/2024 - Em andamento etapa de comissionamento.\n01/08/2024 - Planejamento aprovado para fase 2 da execução.",
+                        "pp_contrato": "4600004857",
+                        "saldo_si": 1899823.82,
+                        "natureza": "Outros"
+                    },
+                    {
+                        "descricao": "Projeto e instalação para sistemas da usina.",
+                        "fornecedor": "BRASIL SERVICE ENGENHARIA (12744048)",
+                        "gestor": "Patrícia Almeida Costa",
+                        "vencimento": "07/01/2028",
+                        "valor_contrato": 8293917.15,
+                        "resumo": "01/08/2024 - Reunião técnica realizada com o fornecedor.\n15/06/2024 - Serviço parcialmente executado e em conformidade.\n09/08/2024 - Aditivo de prazo solicitado.\n08/11/2024 - Planejamento aprovado para fase 2 da execução.",
+                        "pp_contrato": "4600005289",
+                        "saldo_si": 2051193.64,
+                        "natureza": "CAPEX"
+                    }
+                ]
+            },
+            {
+                "nome": "Confiabilidade",
+                "projetos": [
+                    {
+                        "descricao": "Inspeção técnica para sistemas da usina.",
+                        "fornecedor": "ALVO SISTEMAS TÉCNICOS (12277534)",
+                        "gestor": "Carolina Figueiredo Silva",
+                        "vencimento": "30/04/2026",
+                        "valor_contrato": 1413011.83,
+                        "resumo": "07/12/2024 - Reunião técnica realizada com o fornecedor.\n08/06/2024 - Serviço parcialmente executado e em conformidade.\n22/09/2024 - Aditivo de prazo solicitado.",
+                        "pp_contrato": "4600008787",
+                        "saldo_si": 635476.13,
+                        "natureza": "Outros"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "uhe": "UHE Pedra Alta",
+        "areas": [
+            {
+                "nome": "Mecânica",
+                "projetos": [
+                    {
+                        "descricao": "Serviços de manutenção para sistemas da usina.",
+                        "fornecedor": "HIDROFORTE SUPRIMENTOS LTDA (12859262)",
+                        "gestor": "Carolina Figueiredo Silva",
+                        "vencimento": "14/07/2027",
+                        "valor_contrato": 6121933.37,
+                        "resumo": "10/10/2024 - Execução em conformidade com cronograma atualizado.\n25/08/2024 - Serviço parcialmente executado e em conformidade.\n04/10/2024 - Contrato revisado com base em novo escopo.\n16/01/2025 - Inspeção técnica concluída com parecer positivo.",
+                        "pp_contrato": "4600005136",
+                        "saldo_si": 2047791.81,
+                        "natureza": "OPEX"
+                    },
+                    {
+                        "descricao": "Inspeção técnica para sistemas da usina.",
+                        "fornecedor": "HIDROFORTE SUPRIMENTOS LTDA (12339384)",
+                        "gestor": "Ana Clara Martins",
+                        "vencimento": "17/10/2027",
+                        "valor_contrato": 4745502.12,
+                        "resumo": "11/02/2025 - Reunião técnica realizada com o fornecedor.\n10/11/2024 - Reunião técnica realizada com o fornecedor.\n06/02/2025 - Contrato revisado com base em novo escopo.\n16/06/2024 - Contrato revisado com base em novo escopo.",
+                        "pp_contrato": "4600002731",
+                        "saldo_si": 2474557.38,
+                        "natureza": "Outros"
+                    },
+                    {
+                        "descricao": "Inspeção técnica para sistemas da usina.",
+                        "fornecedor": "SOLTEC SOLUÇÕES INDUSTRIAIS (12107146)",
+                        "gestor": "Fernanda Rocha Lima",
+                        "vencimento": "01/09/2026",
+                        "valor_contrato": 2795958.73,
+                        "resumo": "31/08/2024 - Contrato revisado com base em novo escopo.\n07/08/2024 - Inspeção técnica concluída com parecer positivo.\n07/09/2024 - Planejamento aprovado para fase 2 da execução.",
+                        "pp_contrato": "4600002539",
+                        "saldo_si": 970361.06,
+                        "natureza": "Guarda-Chuva"
+                    }
+                ]
+            },
+            {
+                "nome": "Confiabilidade",
+                "projetos": [
+                    {
+                        "descricao": "Inspeção técnica para sistemas da usina.",
+                        "fornecedor": "NORTE ENGENHARIA AVANÇADA (12120953)",
+                        "gestor": "Rafael Monteiro Lopes",
+                        "vencimento": "29/03/2027",
+                        "valor_contrato": 4848677.0,
+                        "resumo": "18/12/2024 - Serviço parcialmente executado e em conformidade.\n16/07/2024 - Execução em conformidade com cronograma atualizado.",
+                        "pp_contrato": "4600004362",
+                        "saldo_si": 1722983.6,
+                        "natureza": "OPEX"
+                    },
+                    {
+                        "descricao": "Projeto e instalação para sistemas da usina.",
+                        "fornecedor": "BRASIL SERVICE ENGENHARIA (12986431)",
+                        "gestor": "Eduardo Tavares Borges",
+                        "vencimento": "16/08/2026",
+                        "valor_contrato": 393989.79,
+                        "resumo": "28/08/2024 - Inspeção técnica concluída com parecer positivo.\n30/01/2025 - Reunião técnica realizada com o fornecedor.",
+                        "pp_contrato": "4600009150",
+                        "saldo_si": 137597.94,
+                        "natureza": "Guarda-Chuva"
+                    }
+                ]
+            },
+            {
+                "nome": "Elétrica",
+                "projetos": [
+                    {
+                        "descricao": "Inspeção técnica para sistemas da usina.",
+                        "fornecedor": "DELTA MANUTENÇÕES EIRELI (12434602)",
+                        "gestor": "Fernanda Rocha Lima",
+                        "vencimento": "15/07/2026",
+                        "valor_contrato": 7684261.6,
+                        "resumo": "05/02/2025 - Aguardando entrega final dos equipamentos.\n01/10/2024 - Contrato em fase de encerramento.\n05/02/2025 - Contrato revisado com base em novo escopo.",
+                        "pp_contrato": "4600001718",
+                        "saldo_si": 2891745.0,
+                        "natureza": "Guarda-Chuva"
+                    },
+                    {
+                        "descricao": "Serviços de manutenção para sistemas da usina.",
+                        "fornecedor": "NORTE ENGENHARIA AVANÇADA (12946587)",
+                        "gestor": "Patrícia Almeida Costa",
+                        "vencimento": "04/05/2027",
+                        "valor_contrato": 4975231.71,
+                        "resumo": "12/01/2025 - Contrato revisado com base em novo escopo.\n05/07/2024 - Aditivo de prazo solicitado.\n11/06/2024 - Contrato revisado com base em novo escopo.\n07/07/2024 - Reunião técnica realizada com o fornecedor.",
+                        "pp_contrato": "4600009647",
+                        "saldo_si": 1119349.57,
+                        "natureza": "Guarda-Chuva"
+                    },
+                    {
+                        "descricao": "Fornecimento de equipamentos para sistemas da usina.",
+                        "fornecedor": "HIDROFORTE SUPRIMENTOS LTDA (12199111)",
+                        "gestor": "João Henrique Souza",
+                        "vencimento": "22/01/2027",
+                        "valor_contrato": 1864342.77,
+                        "resumo": "08/10/2024 - Serviço parcialmente executado e em conformidade.\n13/10/2024 - Aguardando entrega final dos equipamentos.",
+                        "pp_contrato": "4600002837",
+                        "saldo_si": 1067116.1,
+                        "natureza": "Guarda-Chuva"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "uhe": "UHE Santa Estela",
+        "areas": [
+            {
+                "nome": "Mecânica",
+                "projetos": [
+                    {
+                        "descricao": "Inspeção técnica para sistemas da usina.",
+                        "fornecedor": "ALVO SISTEMAS TÉCNICOS (12867782)",
+                        "gestor": "Ana Clara Martins",
+                        "vencimento": "06/04/2027",
+                        "valor_contrato": 1495941.92,
+                        "resumo": "08/08/2024 - Contrato revisado com base em novo escopo.\n24/10/2024 - Reunião técnica realizada com o fornecedor.\n08/10/2024 - Reunião técnica realizada com o fornecedor.",
+                        "pp_contrato": "4600000017",
+                        "saldo_si": 816300.22,
+                        "natureza": "CAPEX"
+                    },
+                    {
+                        "descricao": "Fornecimento de equipamentos para sistemas da usina.",
+                        "fornecedor": "HIDROFORTE SUPRIMENTOS LTDA (12689090)",
+                        "gestor": "Eduardo Tavares Borges",
+                        "vencimento": "01/01/2028",
+                        "valor_contrato": 6379819.39,
+                        "resumo": "09/08/2024 - Planejamento aprovado para fase 2 da execução.\n24/10/2024 - Planejamento aprovado para fase 2 da execução.\n15/06/2024 - Aguardando entrega final dos equipamentos.",
+                        "pp_contrato": "4600009869",
+                        "saldo_si": 1956913.56,
+                        "natureza": "CAPEX"
+                    },
+                    {
+                        "descricao": "Inspeção técnica para sistemas da usina.",
+                        "fornecedor": "ENGEFLOW AUTOMAÇÃO INDUSTRIAL (12220689)",
+                        "gestor": "Lucas Mendes Ribeiro",
+                        "vencimento": "02/05/2028",
+                        "valor_contrato": 9384368.34,
+                        "resumo": "15/09/2024 - Contrato em fase de encerramento.\n04/02/2025 - Aguardando entrega final dos equipamentos.",
+                        "pp_contrato": "4600009655",
+                        "saldo_si": 2956391.65,
+                        "natureza": "CAPEX"
+                    },
+                    {
+                        "descricao": "Projeto e instalação para sistemas da usina.",
+                        "fornecedor": "ALVO SISTEMAS TÉCNICOS (12922810)",
+                        "gestor": "Carolina Figueiredo Silva",
+                        "vencimento": "27/01/2026",
+                        "valor_contrato": 2738630.07,
+                        "resumo": "12/09/2024 - Planejamento aprovado para fase 2 da execução.\n05/11/2024 - Em andamento etapa de comissionamento.\n14/07/2024 - Aditivo de prazo solicitado.\n14/12/2024 - Reunião técnica realizada com o fornecedor.",
+                        "pp_contrato": "4600004416",
+                        "saldo_si": 742936.94,
+                        "natureza": "Guarda-Chuva"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "uhe": "UHE Rio Branco",
+        "areas": [
+            {
+                "nome": "Elétrica",
+                "projetos": [
+                    {
+                        "descricao": "Fornecimento de equipamentos para sistemas da usina.",
+                        "fornecedor": "ENGEFLOW AUTOMAÇÃO INDUSTRIAL (12278641)",
+                        "gestor": "João Henrique Souza",
+                        "vencimento": "12/01/2028",
+                        "valor_contrato": 4555236.69,
+                        "resumo": "17/12/2024 - Planejamento aprovado para fase 2 da execução.\n07/02/2025 - Contrato em fase de encerramento.\n18/02/2025 - Aguardando entrega final dos equipamentos.",
+                        "pp_contrato": "4600009519",
+                        "saldo_si": 2554502.34,
+                        "natureza": "CAPEX"
+                    },
+                    {
+                        "descricao": "Serviços de manutenção para sistemas da usina.",
+                        "fornecedor": "BRASIL SERVICE ENGENHARIA (12596086)",
+                        "gestor": "Ana Clara Martins",
+                        "vencimento": "21/03/2028",
+                        "valor_contrato": 6772538.59,
+                        "resumo": "22/02/2025 - Serviço parcialmente executado e em conformidade.\n05/12/2024 - Planejamento aprovado para fase 2 da execução.\n18/12/2024 - Execução em conformidade com cronograma atualizado.\n11/06/2024 - Execução em conformidade com cronograma atualizado.",
+                        "pp_contrato": "4600009543",
+                        "saldo_si": 2701105.77,
+                        "natureza": "Outros"
+                    },
+                    {
+                        "descricao": "Projeto e instalação para sistemas da usina.",
+                        "fornecedor": "SOLTEC SOLUÇÕES INDUSTRIAIS (12347669)",
+                        "gestor": "Ana Clara Martins",
+                        "vencimento": "13/02/2026",
+                        "valor_contrato": 4787778.85,
+                        "resumo": "16/01/2025 - Aguardando entrega final dos equipamentos.\n08/12/2024 - Inspeção técnica concluída com parecer positivo.\n25/10/2024 - Reunião técnica realizada com o fornecedor.",
+                        "pp_contrato": "4600007927",
+                        "saldo_si": 2579646.49,
+                        "natureza": "OPEX"
+                    },
+                    {
+                        "descricao": "Fornecimento de equipamentos para sistemas da usina.",
+                        "fornecedor": "SOLTEC SOLUÇÕES INDUSTRIAIS (12206687)",
+                        "gestor": "Rafael Monteiro Lopes",
+                        "vencimento": "04/12/2027",
+                        "valor_contrato": 7030640.36,
+                        "resumo": "01/11/2024 - Execução em conformidade com cronograma atualizado.\n06/12/2024 - Serviço parcialmente executado e em conformidade.\n10/02/2025 - Planejamento aprovado para fase 2 da execução.\n06/02/2025 - Aditivo de prazo solicitado.",
+                        "pp_contrato": "4600007577",
+                        "saldo_si": 3608646.7,
+                        "natureza": "OPEX"
+                    }
+                ]
+            },
+            {
+                "nome": "Confiabilidade",
+                "projetos": [
+                    {
+                        "descricao": "Serviços de manutenção para sistemas da usina.",
+                        "fornecedor": "ENGEFLOW AUTOMAÇÃO INDUSTRIAL (12914853)",
+                        "gestor": "Ana Clara Martins",
+                        "vencimento": "05/08/2026",
+                        "valor_contrato": 5828102.88,
+                        "resumo": "20/10/2024 - Contrato em fase de encerramento.\n14/11/2024 - Serviço parcialmente executado e em conformidade.\n27/08/2024 - Planejamento aprovado para fase 2 da execução.\n19/08/2024 - Aguardando entrega final dos equipamentos.",
+                        "pp_contrato": "4600009139",
+                        "saldo_si": 2566949.24,
+                        "natureza": "CAPEX"
+                    },
+                    {
+                        "descricao": "Fornecimento de equipamentos para sistemas da usina.",
+                        "fornecedor": "BRASIL SERVICE ENGENHARIA (12832048)",
+                        "gestor": "Carolina Figueiredo Silva",
+                        "vencimento": "21/07/2026",
+                        "valor_contrato": 4402907.16,
+                        "resumo": "16/01/2025 - Em andamento etapa de comissionamento.\n16/11/2024 - Contrato em fase de encerramento.\n11/06/2024 - Contrato revisado com base em novo escopo.\n24/08/2024 - Em andamento etapa de comissionamento.",
+                        "pp_contrato": "4600000282",
+                        "saldo_si": 1501401.85,
+                        "natureza": "Guarda-Chuva"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "uhe": "UHE Nova Esperança",
+        "areas": [
+            {
+                "nome": "Mecânica",
+                "projetos": [
+                    {
+                        "descricao": "Fornecimento de equipamentos para sistemas da usina.",
+                        "fornecedor": "HIDROFORTE SUPRIMENTOS LTDA (12214625)",
+                        "gestor": "Carolina Figueiredo Silva",
+                        "vencimento": "01/07/2026",
+                        "valor_contrato": 648118.29,
+                        "resumo": "18/06/2024 - Inspeção técnica concluída com parecer positivo.\n23/10/2024 - Contrato revisado com base em novo escopo.\n12/08/2024 - Inspeção técnica concluída com parecer positivo.",
+                        "pp_contrato": "4600004500",
+                        "saldo_si": 191083.46,
+                        "natureza": "Outros"
+                    },
+                    {
+                        "descricao": "Serviços de manutenção para sistemas da usina.",
+                        "fornecedor": "ENGEFLOW AUTOMAÇÃO INDUSTRIAL (12920753)",
+                        "gestor": "Rafael Monteiro Lopes",
+                        "vencimento": "23/04/2028",
+                        "valor_contrato": 1604102.83,
+                        "resumo": "22/12/2024 - Em andamento etapa de comissionamento.\n23/12/2024 - Reunião técnica realizada com o fornecedor.\n15/12/2024 - Serviço parcialmente executado e em conformidade.",
+                        "pp_contrato": "4600007351",
+                        "saldo_si": 848912.15,
+                        "natureza": "CAPEX"
+                    },
+                    {
+                        "descricao": "Fornecimento de equipamentos para sistemas da usina.",
+                        "fornecedor": "HIDROFORTE SUPRIMENTOS LTDA (12171820)",
+                        "gestor": "Patrícia Almeida Costa",
+                        "vencimento": "01/06/2026",
+                        "valor_contrato": 4754688.81,
+                        "resumo": "07/09/2024 - Serviço parcialmente executado e em conformidade.\n02/10/2024 - Planejamento aprovado para fase 2 da execução.\n10/11/2024 - Serviço parcialmente executado e em conformidade.",
+                        "pp_contrato": "4600001358",
+                        "saldo_si": 1599034.54,
+                        "natureza": "Guarda-Chuva"
+                    },
+                    {
+                        "descricao": "Fornecimento de equipamentos para sistemas da usina.",
+                        "fornecedor": "BRASIL SERVICE ENGENHARIA (12995384)",
+                        "gestor": "Eduardo Tavares Borges",
+                        "vencimento": "24/01/2026",
+                        "valor_contrato": 1453443.21,
+                        "resumo": "17/11/2024 - Contrato revisado com base em novo escopo.\n16/06/2024 - Serviço parcialmente executado e em conformidade.",
+                        "pp_contrato": "4600004905",
+                        "saldo_si": 742865.51,
+                        "natureza": "Guarda-Chuva"
+                    }
+                ]
+            },
+            {
+                "nome": "Confiabilidade",
+                "projetos": [
+                    {
+                        "descricao": "Projeto e instalação para sistemas da usina.",
+                        "fornecedor": "HIDROFORTE SUPRIMENTOS LTDA (12521242)",
+                        "gestor": "Eduardo Tavares Borges",
+                        "vencimento": "05/12/2027",
+                        "valor_contrato": 9282244.34,
+                        "resumo": "07/09/2024 - Aditivo de prazo solicitado.\n18/12/2024 - Inspeção técnica concluída com parecer positivo.\n21/10/2024 - Aguardando entrega final dos equipamentos.",
+                        "pp_contrato": "4600004313",
+                        "saldo_si": 4998883.88,
+                        "natureza": "Guarda-Chuva"
+                    },
+                    {
+                        "descricao": "Serviços de manutenção para sistemas da usina.",
+                        "fornecedor": "NORTE ENGENHARIA AVANÇADA (12825298)",
+                        "gestor": "Fernanda Rocha Lima",
+                        "vencimento": "19/04/2027",
+                        "valor_contrato": 9408051.29,
+                        "resumo": "02/01/2025 - Inspeção técnica concluída com parecer positivo.\n27/10/2024 - Execução em conformidade com cronograma atualizado.\n11/10/2024 - Aditivo de prazo solicitado.\n22/09/2024 - Contrato revisado com base em novo escopo.",
+                        "pp_contrato": "4600003214",
+                        "saldo_si": 3689499.6,
+                        "natureza": "Outros"
+                    },
+                    {
+                        "descricao": "Projeto e instalação para sistemas da usina.",
+                        "fornecedor": "HIDROFORTE SUPRIMENTOS LTDA (12426476)",
+                        "gestor": "Ana Clara Martins",
+                        "vencimento": "20/03/2027",
+                        "valor_contrato": 6083675.95,
+                        "resumo": "09/02/2025 - Em andamento etapa de comissionamento.\n24/09/2024 - Serviço parcialmente executado e em conformidade.\n06/10/2024 - Execução em conformidade com cronograma atualizado.\n03/12/2024 - Inspeção técnica concluída com parecer positivo.",
+                        "pp_contrato": "4600002073",
+                        "saldo_si": 2706000.32,
+                        "natureza": "CAPEX"
+                    },
+                    {
+                        "descricao": "Serviços de manutenção para sistemas da usina.",
+                        "fornecedor": "OMEGA POWER SOLUTIONS (12119293)",
+                        "gestor": "Carolina Figueiredo Silva",
+                        "vencimento": "08/06/2028",
+                        "valor_contrato": 6248516.81,
+                        "resumo": "17/12/2024 - Em andamento etapa de comissionamento.\n04/07/2024 - Em andamento etapa de comissionamento.\n01/01/2025 - Aditivo de prazo solicitado.\n13/06/2024 - Inspeção técnica concluída com parecer positivo.",
+                        "pp_contrato": "4600003970",
+                        "saldo_si": 3716258.11,
+                        "natureza": "CAPEX"
+                    },
+                    {
+                        "descricao": "Serviços de manutenção para sistemas da usina.",
+                        "fornecedor": "OMEGA POWER SOLUTIONS (12679110)",
+                        "gestor": "Eduardo Tavares Borges",
+                        "vencimento": "24/08/2027",
+                        "valor_contrato": 4199152.14,
+                        "resumo": "16/02/2025 - Inspeção técnica concluída com parecer positivo.\n17/02/2025 - Contrato em fase de encerramento.\n18/06/2024 - Execução em conformidade com cronograma atualizado.",
+                        "pp_contrato": "4600009700",
+                        "saldo_si": 1168783.24,
+                        "natureza": "Outros"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "uhe": "UHE Alto Sol",
+        "areas": [
+            {
+                "nome": "Confiabilidade",
+                "projetos": [
+                    {
+                        "descricao": "Projeto e instalação para sistemas da usina.",
+                        "fornecedor": "BRASIL SERVICE ENGENHARIA (12360825)",
+                        "gestor": "João Henrique Souza",
+                        "vencimento": "08/11/2026",
+                        "valor_contrato": 8984114.82,
+                        "resumo": "10/01/2025 - Aditivo de prazo solicitado.\n31/08/2024 - Planejamento aprovado para fase 2 da execução.\n14/08/2024 - Inspeção técnica concluída com parecer positivo.",
+                        "pp_contrato": "4600000699",
+                        "saldo_si": 5138721.5,
+                        "natureza": "CAPEX"
+                    },
+                    {
+                        "descricao": "Serviços de manutenção para sistemas da usina.",
+                        "fornecedor": "BRASIL SERVICE ENGENHARIA (12309463)",
+                        "gestor": "Fernanda Rocha Lima",
+                        "vencimento": "22/04/2026",
+                        "valor_contrato": 1427347.98,
+                        "resumo": "26/10/2024 - Reunião técnica realizada com o fornecedor.\n14/08/2024 - Contrato revisado com base em novo escopo.",
+                        "pp_contrato": "4600007570",
+                        "saldo_si": 556606.15,
+                        "natureza": "OPEX"
+                    }
+                ]
+            },
+            {
+                "nome": "Elétrica",
+                "projetos": []
+            }
+        ]
+    }
+]
+        ;
+
+        function formatarValor(valor) {
+            if (!valor || isNaN(valor)) return '-';
+            return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        function parseValor(valor) {
+                    if (!valor || String(valor).trim() === '-') return 0;
+                    let clean = String(valor).replace(/\./g, '').replace(',', '.').trim();
+                    return parseFloat(clean);
+                }
+
+        async function carregarDados() {
+
+            const sidebarUHE = document.getElementById('sidebar-uhe');
+            const sidebarGestor = document.getElementById('sidebar-gestor');
+            const sidebarVencimento = document.getElementById("listaDatas");
+            const content = document.getElementById("content");
+            const btnTodosProjetos = document.getElementById("btnTodosProjetos");
+
+            // ✅ Cole aqui o bloco do filtro por disciplina
+            const sidebarDisciplina = document.getElementById("sidebar-disciplina");
+            const disciplinasSet = new Set();
+            dados.forEach(uhe => {
+                uhe.areas.forEach(area => {
+                    disciplinasSet.add(area.nome);
+                });
+            });
+
+            // Ordenar e criar botões para cada disciplina
+            Array.from(disciplinasSet).sort().forEach(disciplina => {
+                console.log(`Criando botão para disciplina: ${disciplina}`);
+
+                const disciplinaButton = document.createElement("button");
+                disciplinaButton.classList.add("btn", "btn-outline-dark", "w-100", "mb-2");
+                disciplinaButton.textContent = disciplina;
+
+                // Evento de clique para filtrar os projetos da disciplina selecionada
+                disciplinaButton.addEventListener("click", () => {
+                    content.innerHTML = `
+                        <div class="bg-secondary text-white p-1 mb-1 rounded">
+                            <h2 class="text-center">Projetos da Disciplina: ${disciplina}</h2>
+                        </div>
+                    `;
+
+                    let projetosExibidos = false;
+
+                    dados.forEach(uhe => {
+                        let uheHTML = `<h3 class="mt-4 text-secondary"><i class="fas fa-dam"></i> ${uhe.uhe}</h3>`;
+                        let projetosHTML = "";
+
+                        uhe.areas.forEach(area => {
+                            if (area.nome === disciplina) {
+                                projetosHTML += `<h4 class="mt-3 text-primary"><i class="fas fa-tools"></i> ${area.nome}</h4>`;
+
+                                area.projetos.forEach(projeto => {
+                                    let hoje = new Date();
+                                    let vencimentoData = new Date(projeto.vencimento.split('/').reverse().join('-'));
+                                    let diffDias = Math.ceil((vencimentoData - hoje) / (1000 * 60 * 60 * 24));
+
+                                    let rowClass = "";
+                                    if (diffDias < 60) {
+                                        rowClass = "vencimento-ate-2-meses";
+                                    } else if (diffDias >= 60 && diffDias < 120) {
+                                        rowClass = "vencimento-2-a-4-meses";
+                                    } else if (diffDias >= 120 && diffDias <= 365) {
+                                        rowClass = "vencimento-6-a-12-meses";
+                                    }
+
+
+                                    projetosHTML += `
+                                        <div class="card mb-4 shadow-sm">
+                                            <div class="card-header bg-light text-dark">
+                                                <h5 class="mb-0"><i class="fas fa-project-diagram"></i> ${projeto.descricao}</h5>
+                                            </div>
+                                            <div class="card-body">
+                                                <table class="table table-bordered">
+                                                    <tbody>
+                                                        <tr>
+                                                            <th style="width:20%;"><i class="fas fa-file-alt"></i> Resumo do Projeto</th>
+                                                            <td style="width:30%;"><div style="max-height: 100px; overflow-y: auto;">${projeto.resumo || '-'}</div></td>
+                                                            <th style="width:20%;"><i class="fas fa-industry"></i> Fornecedor</th>
+                                                            <td style="width:30%;">${projeto.fornecedor || '-'}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th><i class="fas fa-file-contract"></i> Nº do PP/Contrato</th>
+                                                            <td>${projeto.pp_contrato || '-'}</td>
+                                                            <th><i class="fas fa-user-tie"></i> Gestor</th>
+                                                            <td>${projeto.gestor || '-'}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th><i class="fas fa-calendar-alt"></i> Vencimento</th>
+                                                            <td>${projeto.vencimento || '-'}</td>
+                                                            <th><i class="fas fa-dollar-sign"></i> Valor Contrato</th>
+                                                            <td>${formatarValor(projeto.valor_contrato)}</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    `;
+                                });
+                            }
+                        });
+
+                        if (projetosHTML !== "") {
+                            projetosExibidos = true;
+                            content.innerHTML += uheHTML + projetosHTML;
+                        }
+                    });
+
+                    if (!projetosExibidos) {
+                        content.innerHTML += `<p class="text-center mt-3">Nenhum projeto encontrado para essa disciplina.</p>`;
+                    }
+                });
+
+
+                sidebarDisciplina.appendChild(disciplinaButton);
+            });
+
+            function exibirTodosProjetos() {
+                content.innerHTML = `<h2 class="text-primary">Lista Completa de Projetos</h2>`;
+                content.innerHTML = `
+                        <div class="bg-secondary text-white p-1 mb-1 rounded">
+                            <h2 class="text-center">Lista Completa dos Projetos da Engenharia Eletromecânica</h2>
+                        </div>
+                    `;
+                // Criar lista com projetos ordenados por vencimento
+                let projetosOrdenados = [];
+                const hoje = new Date();
+                const limite = new Date();
+                limite.setMonth(limite.getMonth() + 12);
+            
+                dados.forEach(uhe => {
+                    uhe.areas.forEach(area => {
+                        area.projetos.forEach(projeto => {
+                            const [dia, mes, ano] = projeto.vencimento.split("/");
+                            const dataVencimento = new Date(`${ano}-${mes}-${dia}`);
+            
+                            if (dataVencimento >= hoje && dataVencimento <= limite) {
+                                projetosOrdenados.push({
+                                    ...projeto,
+                                    uhe: uhe.uhe,
+                                    area: area.nome,
+                                    dataVencimento
+                                });
+                            }
+                        });
+                    });
+                });
+            
+                // Ordenar os projetos do mais próximo ao mais distante
+                projetosOrdenados.sort((a, b) => a.dataVencimento - b.dataVencimento);
+            
+                // Criar tabela de vencimentos com rolagem
+                if (projetosOrdenados.length > 0) {
+                    // Criar um botão para expandir/recolher a tabela
+                    content.innerHTML += `
+                        <div class="card">
+                            <div class="card-header bg-light text-white m-0">
+                                <button class="btn btn-dark w-100 mb-0" type="button" data-bs-toggle="collapse" data-bs-target="#tabelaVencimentosContainer" aria-expanded="false">
+                                    🔽 Tabela com Projetos próximos ao vencimento - Clicar para Expandir
+                                </button>
+                            </div>
+                            <div class="collapse" id="tabelaVencimentosContainer">
+                                <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>PP/Contrato</th>
+                                                <th>Fornecedor</th>
+                                                <th>Gestor</th>
+                                                <th>Vencimento</th>
+                                                <th>Usina</th>
+                                                <th>Disciplina</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tabelaVencimentos"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    // Criar Expander para os gráficos logo abaixo da tabela de vencimentos
+                    content.innerHTML += `
+                        <div class="card">
+                            <div class="card-header bg-light m-0">
+                                <button class="btn btn-dark w-100 mt-0" type="button" data-bs-toggle="collapse" data-bs-target="#expanderGraficos">
+                                    📊 Gráficos dos Projetos - Clique para Expandir
+                                </button>
+                            </div>
+                            <div id="expanderGraficos" class="collapse">
+                                <div class="card-body" id="graficosContainer">
+                                    <div class="row" id="cardsGraficos"></div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    // Selecionar o container dos gráficos
+                    const container = document.getElementById("cardsGraficos");
+
+                    function criarGrafico(id, titulo, tipo, labels, dados, cores, options = {}, width) {
+                        container.innerHTML += `
+                            <div class="col-md-${width} d-flex justify-content-center">
+                                <div class="card m-1 shadow" style="width: 100%; max-width: 1400px;">
+                                    <div class="card-body">
+                                        <h5 class="card-title text-center">${titulo}</h5>
+                                        <canvas id="${id}" style="max-width: 100%; max-height: 260px;"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+
+                        setTimeout(() => {
+                            let canvas = document.getElementById(id);
+                            if (canvas) {
+                                new Chart(canvas, {
+                                    type: tipo,
+                                    data: {
+                                        labels: labels,
+                                        datasets: [{
+                                            label: titulo,
+                                            data: dados,
+                                            backgroundColor: cores,
+                                            borderColor: 'rgba(255, 255, 255, 1)',
+                                            borderWidth: 2
+                                        }]
+                                    },
+                                    options: Object.assign({
+                                        responsive: true,
+                                        maintainAspectRatio: false,
+                                        animation: {
+                                            duration: 1500,
+                                            easing: 'easeInOutBounce'
+                                        },
+                                        plugins: {
+                                            legend: { display: false, position: 'top' },
+                                            datalabels: {
+                                                display: true,
+                                                anchor: 'end',
+                                                align: 'top',
+                                                color: 'black',
+                                                font: {
+                                                    weight: 'bold',
+                                                    size: 20
+                                                },
+                                                formatter: value => value.toFixed(2)
+                                            }
+                                        },
+                                        scales: {
+                                            x: { grid: { display: false } },
+                                            y: {
+                                                beginAtZero: true,
+                                                grid: { display: false },
+                                                max: Math.max(...dados) * 1.2,
+                                                display: false
+                                            },
+                                        }
+                                    }, options),
+                                    plugins: [ChartDataLabels]
+                                });
+
+                            } else {
+                                console.error(`Canvas ${id} não encontrado!`);
+                            }
+                        }, 500);
+                    }
+
+                    // Gráfico 1: Valor dos Contratos por Usina (60% largura, em milhões)
+                    let valoresPorUsina = {};
+                    dados.forEach(uhe => {
+                        let soma = 0;
+                        uhe.areas.forEach(area => {
+                            area.projetos.forEach(projeto => {
+                                soma += parseValor(projeto.valor_contrato);
+                            });
+                        });
+                        valoresPorUsina[uhe.uhe] = +(soma / 1e8).toFixed(2);
+
+                    });
+                    criarGrafico("contratosUsinaChart", "Valor dos Contratos por Usina (em Milhões)", "bar", Object.keys(valoresPorUsina), Object.values(valoresPorUsina), ['rgba(54, 162, 235, 0.6)'], undefined, 7);
+
+                    // Gráfico 2: Distribuição dos Projetos por Natureza (Rosca, 40% largura, novas cores)
+                    let projetosNatureza = {};
+                    dados.forEach(uhe => {
+                        uhe.areas.forEach(area => {
+                            area.projetos.forEach(projeto => {
+                                let natureza = projeto.natureza.trim() || 'Outros';
+                                projetosNatureza[natureza] = (projetosNatureza[natureza] || 0) + 1;
+                            });
+                        });
+                    });
+
+                    criarGrafico("naturezaChart", "Distribuição dos Projetos por Natureza", "doughnut", 
+                        Object.keys(projetosNatureza), Object.values(projetosNatureza), 
+                        ['#FF6384', '#FF9F40', '#FFCD56', '#4BC0C0', '#36A2EB'], 
+                        { 
+                            plugins: { 
+                                legend: { display: true }, 
+                                tooltip: { enabled: true }, 
+                                datalabels: { 
+                                    formatter: (value, ctx) => 
+                                        (value / ctx.chart.data.datasets[0].data.reduce((a, b) => a + b) * 100).toFixed(1) + '%',
+                                        font: {
+                                                    weight: 'bold',
+                                                    size: 20,
+                                                    
+                                                },
+                                        color:'black'
+                                } 
+                            },
+                            scales: { 
+                                x: { display: false }, 
+                                y: { display: false } 
+                            } 
+                        }, 
+                        5
+                    );
+
+                    // Gráfico 3: Projetos por Usina (40% largura)
+                    let projetosPorUsina = {};
+                    dados.forEach(uhe => {
+                        projetosPorUsina[uhe.uhe] = uhe.areas.reduce((sum, area) => sum + area.projetos.length, 0);
+                    });
+
+                    criarGrafico("projetosUsinaChart", "Quantidade de Projetos por Usina", "bar", 
+                    Object.keys(projetosPorUsina), Object.values(projetosPorUsina), ['rgba(153, 102, 255, 0.6)'], { indexAxis: 'y',
+                    plugins: { 
+                                legend: { display: false }, 
+                                tooltip: { enabled: true }, 
+                                datalabels: { 
+                                    
+                                        font: {
+                                                    weight: 'bold',
+                                                    size: 20
+                                                },
+                                        display: true,
+                                        anchor: 'end',
+                                        align: 'right',
+                                        color: 'black',
+                                }
+                            }, 
+                            scales: {
+                                x: {
+                                    beginAtZero: true,
+                                    grid: { display: false },
+                                    max: Math.max(...Object.values(projetosPorUsina)) * 1.15,
+                                    display: false
+                                },
+                                y: { grid: { display: false } }
+                            }
+                        
+                            }, 6);
+
+                    // Gráfico 4: Linha do Tempo dos Vencimentos (60% largura, corrigido para exibição geral)
+                    let vencimentos = {};
+                    let projetosPorMes = {};
+
+                    dados.forEach(uhe => {
+                        uhe.areas.forEach(area => {
+                            area.projetos.forEach(projeto => {
+                                let [dia, mes, ano] = projeto.vencimento.split('/');
+                                let key = `${ano}-${mes}`;
+                                vencimentos[key] = (vencimentos[key] || 0) + 1;
+
+                                if (!projetosPorMes[key]) projetosPorMes[key] = [];
+                                projetosPorMes[key].push(projeto.descricao);
+                            });
+                        });
+                    });
+
+                    let vencimentosKeys = Object.keys(vencimentos).sort();
+                    let vencimentosCounts = vencimentosKeys.map(key => vencimentos[key]);
+
+                    criarGrafico("vencimentosChart", "Linha do Tempo dos Vencimentos", "line", vencimentosKeys, vencimentosCounts, 
+                        ['rgba(255, 99, 132, 0.6)'], 
+                        { 
+                            elements: { 
+                                point: { radius: 5 }, 
+                                line: { 
+                                    tension: 0.4, 
+                                    backgroundColor: 'rgba(255, 99, 132, 0.4)', 
+                                    borderColor: 'rgba(255, 99, 132, 1)', 
+                                    fill: true 
+                                } 
+                            }, 
+                            plugins: { 
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const label = context.dataset.label || '';
+                                            const index = context.dataIndex;
+                                            return [`${label}: ${context.formattedValue}`, ...projetosPorMes[vencimentosKeys[index]].map(nome => `• ${nome}`)];
+                                        }
+                                    }
+                                },
+                                legend: { display: false }, 
+                                datalabels: { 
+                                    anchor: 'end', 
+                                    align: 'top', 
+                                    color: 'black', 
+                                    font: { weight: 'bold', size: 20 }, 
+                                    formatter: value => value 
+                                }
+                            }
+                        },
+                        6
+                    );
+
+
+                    const tabelaVencimentos = document.getElementById("tabelaVencimentos");
+
+                    projetosOrdenados.forEach(projeto => {
+                    const row = document.createElement("tr");
+
+                    // Converter a data de vencimento corretamente
+                    const hoje = new Date();
+                    const partesData = projeto.vencimento.split("/");
+                    const dataVencimento = new Date(`${partesData[2]}-${partesData[1]}-${partesData[0]}`);
+
+                    const diffMilissegundos = dataVencimento.getTime() - hoje.getTime();
+                    const diffDias = diffMilissegundos / (1000 * 60 * 60 * 24);
+
+                    let rowClass = "";
+                    if (diffDias < 60) {
+                        rowClass = "vencimento-ate-2-meses";
+                    } else if (diffDias >= 60 && diffDias < 120) {
+                        rowClass = "vencimento-2-a-4-meses";
+                    } else if (diffDias >= 120 && diffDias <= 365) {
+                        rowClass = "vencimento-6-a-12-meses";
+                    }
+
+
+
+                    row.innerHTML = `
+                        <td>${projeto.descricao}</td>
+                        <td>${projeto.fornecedor}</td>
+                        <td>${projeto.gestor}</td>
+                        <td>${projeto.vencimento}</td>
+                        <td>${projeto.uhe}</td>
+                        <td>${projeto.area}</td>
+                    `;
+                    row.className = rowClass;
+                    tabelaVencimentos.appendChild(row);
+                    });          
+                }
+            
+                
+                // Exibir todas as usinas e disciplinas abaixo da tabela de vencimentos
+                dados.forEach(uhe => {
+                    content.innerHTML += `<h3 class="mt-4 text-secondary"><i class="fas fa-dam"></i> ${uhe.uhe}</h3>`;
+            
+                    uhe.areas.forEach(area => {
+                        content.innerHTML += `<h4 class="mt-3 text-primary"><i class="fas fa-tools"></i> ${area.nome}</h4>`;
+            
+                        const projetosOrdenados = area.projetos.sort((a, b) => {
+                            return parseValor(b.valor_contrato) - parseValor(a.valor_contrato);
+                        });
+
+            
+                        projetosOrdenados.forEach(projeto => {
+                            // Determinar a classe CSS para o vencimento
+                            let hoje = new Date();
+                            let vencimentoData = new Date(projeto.vencimento.split('/').reverse().join('-'));
+                            let diffDias = Math.ceil((vencimentoData - hoje) / (1000 * 60 * 60 * 24));
+                        
+                            let rowClass = "";
+                            if (diffDias < 60) {
+                                rowClass = "vencimento-ate-2-meses";
+                            } else if (diffDias >= 60 && diffDias < 120) {
+                                rowClass = "vencimento-2-a-4-meses";
+                            } else if (diffDias >= 120 && diffDias <= 365) {
+                                rowClass = "vencimento-6-a-12-meses";
+                            }
+
+                        
+                            content.innerHTML += `
+                                <div class="card mb-4 shadow-sm">
+                                    <div class="card-header bg-light text-dark">
+                                        <h5 class="mb-0"><i class="fas fa-project-diagram"></i> ${projeto.descricao}</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <table class="table table-bordered">
+                                            <tbody>
+                                                <tr>
+                                                    <th style="width:20%;"><i class="fas fa-file-alt"></i> Resumo do Projeto</th>
+                                                    <td style="width:30%;">
+                                                        <div style="max-height: 100px; overflow-y: auto;">${projeto.resumo || '-'}</div>
+                                                    </td>
+                                                    <th style="width:20%;"><i class="fas fa-industry"></i> Fornecedor</th>
+                                                    <td style="width:30%;">${projeto.fornecedor || '-'}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th><i class="fas fa-file-contract"></i> Nº do PP/Contrato</th>
+                                                    <td>${projeto.pp_contrato ? projeto.pp_contrato : '-'}</td>
+                                                    <th><i class="fas fa-user-tie"></i> Gestor</th>
+                                                    <td>${projeto.gestor || '-'}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th><i class="fas fa-calendar-alt"></i> Vencimento</th>
+                                                    <td>${projeto.vencimento || '-'}</td>
+                                                    <th><i class="fas fa-dollar-sign"></i> Valor Contrato</th>
+                                                    <td>${formatarValor(projeto.valor_contrato)}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th><i class="fas fa-balance-scale"></i> Saldo SI</th>
+                                                    <td>${projeto.saldo_si ? formatarValor(projeto.saldo_si) : '-'}</td>
+                                                    <th><i class="fas fa-tag"></i> Natureza do Contrato</th>
+                                                    <td>${projeto.natureza ? projeto.natureza : '-'}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            `;
+
+                        });                
+                        
+                    });
+                });
+
+                animateCards();
+            }
+            
+            exibirTodosProjetos();
+
+            // Criar filtro por Usinas (UHE)
+            dados.forEach((uhe, i) => {
+                const uheButton = document.createElement('button');
+                uheButton.classList.add('btn', 'btn-outline-dark', 'w-100', 'mb-2');
+                uheButton.textContent = `${i + 1}. ${uhe.uhe}`;
+                uheButton.setAttribute("data-bs-toggle", "collapse");
+                uheButton.setAttribute("data-bs-target", `#areaContainer-${i}`);
+                sidebarUHE.appendChild(uheButton);
+
+                const areaContainer = document.createElement('div');
+                areaContainer.classList.add('collapse', 'ms-3');
+                areaContainer.id = `areaContainer-${i}`;
+
+                uhe.areas.forEach((area, j) => {
+                    const areaButton = document.createElement('button');
+                    areaButton.classList.add('btn', 'btn-outline-primary', 'w-100', 'mb-2');
+                    areaButton.textContent = `${i + 1}.${j + 1} ${area.nome}`;
+                    areaButton.onclick = () => {
+                        content.innerHTML = `
+                            <div class="bg-secondary text-white p-1 mb-1 rounded">
+                                <h2 class="text-center">Projetos da ${uhe.uhe} - Área: ${area.nome}</h2>
+                            </div>
+                        `;
+
+                        const projetosOrdenados = area.projetos.sort((a, b) => {
+                            return parseValor(b.valor_contrato) - parseValor(a.valor_contrato);
+                        });
+
+
+                        projetosOrdenados.forEach(projeto => {
+                            // Determinar a classe CSS para o vencimento
+                            let hoje = new Date();
+                            let vencimentoData = new Date(projeto.vencimento.split('/').reverse().join('-'));
+                            let diffDias = Math.ceil((vencimentoData - hoje) / (1000 * 60 * 60 * 24));
+                        
+                            let rowClass = "";
+                            if (diffDias < 60) {
+                                rowClass = "vencimento-ate-2-meses";
+                            } else if (diffDias >= 60 && diffDias < 120) {
+                                rowClass = "vencimento-2-a-4-meses";
+                            } else if (diffDias >= 120 && diffDias <= 365) {
+                                rowClass = "vencimento-6-a-12-meses";
+                            }
+
+                        
+                            content.innerHTML += `
+                                <div class="card mb-4 shadow-sm">
+                                    <div class="card-header bg-light text-dark">
+                                        <h5 class="mb-0"><i class="fas fa-project-diagram"></i> ${projeto.descricao}</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <table class="table table-bordered">
+                                            <tbody>
+                                                <tr>
+                                                    <th style="width:20%;"><i class="fas fa-file-alt"></i> Resumo do Projeto</th>
+                                                    <td style="width:30%;">
+                                                        <div style="max-height: 100px; overflow-y: auto;">${projeto.resumo || '-'}</div>
+                                                    </td>
+                                                    <th style="width:20%;"><i class="fas fa-industry"></i> Fornecedor</th>
+                                                    <td style="width:30%;">${projeto.fornecedor || '-'}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th><i class="fas fa-file-contract"></i> Nº do PP/Contrato</th>
+                                                    <td>${projeto.pp_contrato ? projeto.pp_contrato : '-'}</td>
+                                                    <th><i class="fas fa-user-tie"></i> Gestor</th>
+                                                    <td>${projeto.gestor || '-'}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th><i class="fas fa-calendar-alt"></i> Vencimento</th>
+                                                    <td>${projeto.vencimento || '-'}</td>
+                                                    <th><i class="fas fa-dollar-sign"></i> Valor Contrato</th>
+                                                    <td>${formatarValor(projeto.valor_contrato)}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th><i class="fas fa-balance-scale"></i> Saldo SI</th>
+                                                    <td>${projeto.saldo_si ? formatarValor(projeto.saldo_si) : '-'}</td>
+                                                    <th><i class="fas fa-tag"></i> Natureza do Contrato</th>
+                                                    <td>${projeto.natureza ? projeto.natureza : '-'}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            `;
+                        });                
+                        
+                    };
+                    areaContainer.appendChild(areaButton);
+                });
+
+                sidebarUHE.appendChild(areaContainer);
+            });
+
+            // Criar filtro por Gestores
+            const gestoresSet = new Set();
+            dados.forEach(uhe => {
+                uhe.areas.forEach(area => {
+                    area.projetos.forEach(projeto => {
+                        gestoresSet.add(projeto.gestor);
+                    });
+                });
+            });
+
+            const gestoresOrdenados = Array.from(gestoresSet).sort();
+
+            gestoresOrdenados.forEach((gestor, index) => {
+                const gestorButton = document.createElement('button');
+                gestorButton.classList.add('btn', 'btn-outline-dark', 'w-100', 'mb-2');
+                gestorButton.textContent = `${index + 1}. ${gestor}`;
+                sidebarGestor.appendChild(gestorButton);
+
+                gestorButton.onclick = () => {
+                    
+                    content.innerHTML = `
+                        <div class="bg-secondary text-white p-1 mb-1 rounded">
+                            <h2 class="text-center">Projetos de: ${gestor}</h2>
+                        </div>
+                    `;
+
+                    dados.forEach(uhe => {
+                        let temProjeto = false;
+                        let uheHTML = `<h3 class="mt-4 text-secondary"><i class="fas fa-dam"></i> ${uhe.uhe}</h3>`;
+
+                        uhe.areas.forEach(area => {
+                            let projetosFiltrados = area.projetos.filter(projeto => projeto.gestor === gestor);
+
+                            if (projetosFiltrados.length > 0) {
+                                temProjeto = true;
+                                uheHTML += `<h4 class="mt-3 text-primary"><i class="fas fa-tools"></i> ${area.nome}</h4>`;
+
+                                projetosFiltrados.forEach(projeto => {
+                                    // Determinar a classe CSS para o vencimento
+                                    let hoje = new Date();
+                                    let vencimentoData = new Date(projeto.vencimento.split('/').reverse().join('-'));
+                                    let diffDias = Math.ceil((vencimentoData - hoje) / (1000 * 60 * 60 * 24));
+
+                                    let rowClass = "";
+                                    if (diffDias < 60) {
+                                        rowClass = "vencimento-ate-2-meses";
+                                    } else if (diffDias >= 60 && diffDias < 120) {
+                                        rowClass = "vencimento-2-a-4-meses";
+                                    } else if (diffDias >= 120 && diffDias <= 365) {
+                                        rowClass = "vencimento-6-a-12-meses";
+                                    }
+
+
+                                    uheHTML += `
+                                        <div class="card mb-4 shadow-sm">
+                                            <div class="card-header bg-light text-dark">
+                                                <h5 class="mb-0"><i class="fas fa-project-diagram"></i> ${projeto.descricao}</h5>
+                                            </div>
+                                            <div class="card-body">
+                                                <table class="table table-bordered">
+                                                    <tbody>
+                                                        <tr>
+                                                            <th style="width:20%;"><i class="fas fa-file-alt"></i> Resumo do Projeto</th>
+                                                            <td style="width:30%;">
+                                                                <div style="max-height: 100px; overflow-y: auto;">${projeto.resumo || '-'}</div>
+                                                            </td>
+                                                            <th style="width:20%;"><i class="fas fa-industry"></i> Fornecedor</th>
+                                                            <td style="width:30%;">${projeto.fornecedor || '-'}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th><i class="fas fa-file-contract"></i> Nº do PP/Contrato</th>
+                                                            <td>${projeto.pp_contrato ? projeto.pp_contrato : '-'}</td>
+                                                            <th><i class="fas fa-user-tie"></i> Gestor</th>
+                                                            <td>${projeto.gestor || '-'}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th><i class="fas fa-calendar-alt"></i> Vencimento</th>
+                                                            <td>${projeto.vencimento || '-'}</td>
+                                                            <th><i class="fas fa-dollar-sign"></i> Valor Contrato</th>
+                                                            <td>${formatarValor(projeto.valor_contrato)}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th><i class="fas fa-balance-scale"></i> Saldo SI</th>
+                                                            <td>${projeto.saldo_si ? formatarValor(projeto.saldo_si) : '-'}</td>
+                                                            <th><i class="fas fa-tag"></i> Natureza do Contrato</th>
+                                                            <td>${projeto.natureza ? projeto.natureza : '-'}</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    `;
+                                });
+                            }
+                        });
+
+
+                        if (temProjeto) {
+                            content.innerHTML += uheHTML;
+                        }
+                    });
+                };
+            });
+
+            // Criar filtro de Vencimento
+            function adicionarFiltroVencimento() {
+                sidebarVencimento.innerHTML = `<div id="scrollContainer" style="max-height: 300px; overflow-y: auto;"></div>`;
+                const scrollContainer = document.getElementById("scrollContainer");
+
+                const listaDatas = new Set();
+                dados.forEach(uhe => {
+                    uhe.areas.forEach(area => {
+                        area.projetos.forEach(projeto => {
+                            const [dia, mes, ano] = projeto.vencimento.split("/");
+                            const periodo = `${ano}-${mes}`;
+                            listaDatas.add(periodo);
+                        });
+                    });
+                });
+
+                const listaDatasOrdenada = Array.from(listaDatas).sort();
+
+                listaDatasOrdenada.slice(0, 8).forEach((periodo) => {
+                    const [ano, mes] = periodo.split("-");
+                    const mesesNomes = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+                    const nomePeriodo = `${mesesNomes[parseInt(mes) - 1]} ${ano}`;
+
+                    const btnPeriodo = document.createElement("button");
+                    btnPeriodo.classList.add("btn", "btn-outline-dark", "w-100", "mb-2");
+                    btnPeriodo.textContent = nomePeriodo;
+                    scrollContainer.appendChild(btnPeriodo);
+
+                    btnPeriodo.onclick = () => {
+                        content.innerHTML = `
+                            <div class="bg-secondary text-white p-1 mb-1 rounded">
+                                <h2 class="text-center">Projetos com vencimento em: ${nomePeriodo}</h2>
+                            </div>
+                        `;
+
+
+                        dados.forEach(uhe => {
+                            let temProjeto = false;
+                            let uheHTML = `<h3 class="mt-4 text-secondary"><i class="fas fa-dam"></i> ${uhe.uhe}</h3>`;
+                    
+                            uhe.areas.forEach(area => {
+                                let projetosFiltrados = area.projetos.filter(projeto => {
+                                    const [dia, mesProjeto, anoProjeto] = projeto.vencimento.split("/");
+                                    return mesProjeto === mes && anoProjeto === ano;
+                                });
+                    
+                                if (projetosFiltrados.length > 0) {
+                                    temProjeto = true;
+                                    uheHTML += `<h4 class="mt-3 text-primary"><i class="fas fa-tools"></i> ${area.nome}</h4>`;
+                    
+                                    projetosFiltrados.sort((a, b) => {
+                                        return parseValor(b.valor_contrato) - parseValor(a.valor_contrato);
+                                    });
+                    
+                                    projetosFiltrados.forEach(projeto => {
+                                        // Determinar a classe CSS para o vencimento
+                                        let hoje = new Date();
+                                        let vencimentoData = new Date(projeto.vencimento.split('/').reverse().join('-'));
+                                        let diffDias = Math.ceil((vencimentoData - hoje) / (1000 * 60 * 60 * 24));
+
+                                        let rowClass = "";
+                                        if (diffDias < 60) {
+                                            rowClass = "vencimento-ate-2-meses";
+                                        } else if (diffDias >= 60 && diffDias < 120) {
+                                            rowClass = "vencimento-2-a-4-meses";
+                                        } else if (diffDias >= 120 && diffDias <= 365) {
+                                            rowClass = "vencimento-6-a-12-meses";
+                                        }
+
+
+                                        uheHTML += `
+                                            <div class="card mb-4 shadow-sm">
+                                                <div class="card-header bg-light text-dark">
+                                                    <h5 class="mb-0"><i class="fas fa-project-diagram"></i> ${projeto.descricao}</h5>
+                                                </div>
+                                                <div class="card-body">
+                                                    <table class="table table-bordered">
+                                                        <tbody>
+                                                            <tr>
+                                                                <th style="width:20%;"><i class="fas fa-file-alt"></i> Resumo do Projeto</th>
+                                                                <td style="width:30%;">
+                                                                    <div style="max-height: 100px; overflow-y: auto;">${projeto.resumo || '-'}</div>
+                                                                </td>
+                                                                <th style="width:20%;"><i class="fas fa-industry"></i> Fornecedor</th>
+                                                                <td style="width:30%;">${projeto.fornecedor || '-'}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th><i class="fas fa-file-contract"></i> Nº do PP/Contrato</th>
+                                                                <td>${projeto.pp_contrato ? projeto.pp_contrato : '-'}</td>
+                                                                <th><i class="fas fa-user-tie"></i> Gestor</th>
+                                                                <td>${projeto.gestor || '-'}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th><i class="fas fa-calendar-alt"></i> Vencimento</th>
+                                                                <td>${projeto.vencimento || '-'}</td>
+                                                                <th><i class="fas fa-dollar-sign"></i> Valor Contrato</th>
+                                                                <td>${formatarValor(projeto.valor_contrato)}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th><i class="fas fa-balance-scale"></i> Saldo SI</th>
+                                                                <td>${projeto.saldo_si ? formatarValor(projeto.saldo_si) : '-'}</td>
+                                                                <th><i class="fas fa-tag"></i> Natureza do Contrato</th>
+                                                                <td>${projeto.natureza ? projeto.natureza : '-'}</td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        `;
+                                    });
+
+                                }
+                            });
+                    
+                            if (temProjeto) {
+                                content.innerHTML += uheHTML;
+                            }
+                        });
+                    };
+                });
+            }
+
+            adicionarFiltroVencimento();
+            atualizarResumoSidebar();
+            btnTodosProjetos.onclick = exibirTodosProjetos;
+        }
+
+        function atualizarResumoSidebar() {
+            let totalProjetos = 0;
+            let totalValor = 0;
+            let naturezas = {};
+            let vencemAte2Meses = 0;
+
+            const hoje = new Date();
+            const doisMesesDepois = new Date();
+            doisMesesDepois.setMonth(hoje.getMonth() + 3);
+
+            dados.forEach(uhe => {
+                uhe.areas.forEach(area => {
+                area.projetos.forEach(projeto => {
+                    totalProjetos++;
+
+                    const valor = parseValor(projeto.valor_contrato)/100;
+                    totalValor += valor;
+
+                    const natureza = projeto.natureza?.trim() || "Outros";
+                    naturezas[natureza] = (naturezas[natureza] || 0) + 1;
+
+                    // Vencimento
+                    const partes = projeto.vencimento.split('/');
+                    if (partes.length === 3) {
+                    const data = new Date(`${partes[2]}-${partes[1]}-${partes[0]}`);
+                    if (data >= hoje && data <= doisMesesDepois) {
+                        vencemAte2Meses++;
+                    }
+                    }
+                });
+                });
+            });
+
+            document.getElementById("totalProjetos").textContent = totalProjetos;
+            document.getElementById("valorTotalContratos").textContent = totalValor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+            document.getElementById("projetosVencemLogo").textContent = vencemAte2Meses;
+
+            }
+
+        carregarDados();
+
+        // Função que anima todos os elementos com a classe "card"
+        function animateCards() {
+            const cards = document.querySelectorAll('.card');
+            cards.forEach((card, index) => {
+            // Aplica um efeito de fade in e slide-up com um pequeno delay entre elas
+            gsap.from(card, {
+                duration: 1,
+                opacity: 0,
+                y: 35,
+                delay: index * 0.1,
+                ease: "power2.out"
+            });
+            });
+        }
+
+        // Parte do filtro por disciplina
+        // Verificar se o container existe antes de usar
+        const sidebarDisciplina = document.getElementById("sidebar-disciplina");
+        if (!sidebarDisciplina) {
+            console.error("Erro: Elemento sidebar-disciplina não encontrado!");
+        }
+
+        // Criar um conjunto para armazenar as disciplinas únicas
+        const disciplinasSet = new Set();
+
+        // Percorre os dados e adiciona disciplinas ao conjunto
+        dados.forEach(uhe => {
+            uhe.areas.forEach(area => {
+                disciplinasSet.add(area.nome);
+            });
+        });
+
+        // Verificar se há disciplinas encontradas
+        console.log("Disciplinas encontradas:", Array.from(disciplinasSet));
+
+        if (disciplinasSet.size === 0) {
+            console.error("Nenhuma disciplina encontrada nos dados!");
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('searchInput');
+
+            searchInput.addEventListener('input', () => {
+                const termo = searchInput.value.toLowerCase();
+
+                const cards = document.querySelectorAll('.card');
+                const disciplinas = document.querySelectorAll('h4');
+                const usinas = document.querySelectorAll('h3');
+
+                // Passo 1: Ocultar/mostrar os cards com base no texto
+                cards.forEach(card => {
+                const texto = card.textContent.toLowerCase();
+                card.style.display = texto.includes(termo) ? '' : 'none';
+                });
+
+                // Passo 2: Mostrar h4 (disciplina) apenas se houver cards visíveis abaixo
+                disciplinas.forEach(disciplina => {
+                let proximo = disciplina.nextElementSibling;
+                let temCardVisivel = false;
+
+                while (proximo && !['H3', 'H4'].includes(proximo.tagName)) {
+                    if (proximo.classList.contains('card') && proximo.style.display !== 'none') {
+                    temCardVisivel = true;
+                    break;
+                    }
+                    proximo = proximo.nextElementSibling;
+                }
+
+                disciplina.style.display = temCardVisivel ? '' : 'none';
+                });
+
+                // Passo 3: Mostrar h3 (usina) apenas se houver disciplinas ou cards visíveis abaixo
+                usinas.forEach(usina => {
+                let proximo = usina.nextElementSibling;
+                let mostrarUsina = false;
+
+                while (proximo && proximo.tagName !== 'H3') {
+                    if (
+                    (proximo.tagName === 'H4' && proximo.style.display !== 'none') ||
+                    (proximo.classList.contains('card') && proximo.style.display !== 'none')
+                    ) {
+                    mostrarUsina = true;
+                    break;
+                    }
+                    proximo = proximo.nextElementSibling;
+                }
+
+                usina.style.display = mostrarUsina ? '' : 'none';
+                });
+            });
+            });
+
+
+        // Bloqueia clique direito
+        document.addEventListener('contextmenu', e => e.preventDefault());
+
+        // Bloqueia F12, Ctrl+Shift+I, Ctrl+U
+        document.addEventListener('keydown', function(e) {
+            if (e.key === "F12" || 
+                (e.ctrlKey && e.shiftKey && e.key === "I") || 
+                (e.ctrlKey && e.key === "u")) {
+            e.preventDefault();
+            }
+        });
+
+
+
+    </script>
+</body>
+</html>
