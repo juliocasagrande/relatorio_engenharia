@@ -15,6 +15,7 @@
             display: flex;
         }
 
+        /* Sidebar padrão */
         .sidebar {
             width: 280px;
             height: 100vh;
@@ -25,16 +26,62 @@
             border-right: 1px solid #ddd;
             overflow-y: auto;
             padding: 15px;
+            transition: width 0.3s ease, padding 0.3s ease;
+            z-index: 1000;
         }
 
+        /* Sidebar colapsada */
+        .sidebar.collapsed {
+            width: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        /* Conteúdo */
         .content {
             margin-left: 280px;
             flex-grow: 1;
             padding: 20px;
             overflow-y: auto;
             height: 100vh;
+            transition: margin-left 0.3s ease;
         }
 
+        /* Conteúdo quando sidebar escondida */
+        .content.expanded {
+            margin-left: 0 !important;
+            width: 100% !important;
+        }
+
+        /* Botão dentro da sidebar */
+        #btnCollapse {
+            float: right;
+            margin-bottom: 10px;
+        }
+
+        /* Botão fora da sidebar */
+        #btnExpand {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 1050;
+            display: none;
+            background-color: #e0f0ff; /* azul claro */
+            color: #0d6efd;            /* azul padrão Bootstrap */
+            border: 1px solid #0d6efd;
+        }
+
+        /* Exibe o botão de expandir quando sidebar está colapsada */
+        .sidebar.collapsed ~ #btnExpand {
+            display: block;
+        }
+
+        /* Oculta o botão de colapsar quando sidebar está colapsada */
+        .sidebar.collapsed #btnCollapse {
+            display: none;
+        }
+
+        /* Estilo adicional */
         .nav-link {
             cursor: pointer;
         }
@@ -43,7 +90,7 @@
             background: white;
             padding: 15px;
             border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
             margin-bottom: 10px;
         }
 
@@ -61,14 +108,13 @@
             color: black;
         }
 
-
         .vencimento-2-a-4-meses td {
-            background-color: rgba(255, 165, 0, 0.2) !important; /* laranja claro */
+            background-color: rgba(255, 165, 0, 0.2) !important;
             color: #000;
         }
 
         .vencimento-6-a-12-meses td {
-            background-color: rgba(255, 255, 0, 0.12) !important; /* amarelo claro */
+            background-color: rgba(255, 255, 0, 0.12) !important;
             color: #000;
         }
 
@@ -76,6 +122,10 @@
 </head>
 <body>
     <div class="sidebar">
+        <!-- Botão de Minimizar -->
+        <button id="btnCollapse" class="btn btn-outline-primary btn-sm">
+            <i class="fas fa-angle-left"></i>
+        </button>   
         <h5 class="text-center text-primary">Relatório</h5>
         <p class="text-center text-primary" style="margin-bottom: 0px;">Projetos Engenharia</p>
         <h5 class="text-center text-primary" style="margin-top: 0px;">Março de 2025</h5>
@@ -132,8 +182,14 @@
             </div>
         </div>        
           
-    </div>    
+    </div>
+
+    <!-- Botão de expandir -->
+    <button id="btnExpand" class="btn btn-outline-primary btn-sm">
+        <i class="fas fa-angle-right"></i>
+    </button>
     
+    <!-- Conteúdo -->
     <div class="content">
         <div id="content"></div>
     </div>
@@ -1834,7 +1890,20 @@
             }
         });
 
+        const sidebar = document.querySelector('.sidebar');
+        const content = document.querySelector('.content');
+        const btnCollapse = document.getElementById('btnCollapse');
+        const btnExpand = document.getElementById('btnExpand');
 
+        btnCollapse.addEventListener('click', () => {
+            sidebar.classList.add('collapsed');
+            content.classList.add('expanded');
+        });
+
+        btnExpand.addEventListener('click', () => {
+            sidebar.classList.remove('collapsed');
+            content.classList.remove('expanded');
+        });
 
     </script>
 </body>
